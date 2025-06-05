@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import altair as alt
 
 from Utils.load_dataset import load_dataset
 from Utils.threshold_dataset import threshold_ndvi_data
