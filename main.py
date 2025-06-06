@@ -34,6 +34,31 @@ def sidebar():
 
     return lower_ndvi_threshold, upper_ndvi_threshold, selected_visualization
 
+def select_kpin_and_block(dataset):
+    """
+    Creates a Streamlit UI for selecting a KPIN and Block from the dataset.
+
+    Args:
+        dataset (pd.DataFrame): The dataset containing 'Orchard_Name', 'KPIN', and 'Block_Name' columns.
+
+    Returns:
+        tuple: A tuple containing the selected KPIN, Block, and Primary Key.
+    """
+    col1, col2 = st.columns(2)
+    with col1:
+        orchard_options = dataset["Orchard_Name"].unique()
+        if len(orchard_options) == 0:
+            st.warning("No orchards available in the dataset.")
+            return None, None, None
+        selected_orchard = st.selectbox("Select Orchard", sorted(orchard_options))
+        selected_kpin = int(selected_orchard.replace("_", " ").split("-")[0])
+    with col2:
+        filtered_blocks = dataset[dataset["KPIN"] == selected_kpin]["Block_Name"].unique()
+        selected_block = st.selectbox("Select Block",
+                                      filtered_blocks if len(filtered_blocks) > 0 else ["No Blocks Available"])
+    selected_primary_key = f"{selected_kpin}_{selected_block}"
+    return selected_kpin, selected_block, selected_primary_key
+
 
 # Descriptions for each visualization type
 visualization_descriptions = {
@@ -54,22 +79,20 @@ def page_low_or_no_kvds(dataset):
     st.markdown(f"**Description:** {visualization_descriptions['Low or No KVDS']}")
 
     # KPIN and Block selection
-    col1, col2 = st.columns(2)
-    with col1:
-        kpin_options = sorted(dataset["KPIN"].unique())
-        selected_kpin = st.selectbox("Select KPIN", kpin_options)
-    with col2:
-        filtered_blocks = dataset[dataset["KPIN"] == selected_kpin]["Block_Name"].unique()
-        selected_block = st.selectbox("Select Block", filtered_blocks)
-    selected_primary_key = f"{selected_kpin}_{selected_block}"
+    selected_kpin, selected_block, selected_primary_key = select_kpin_and_block(dataset)
 
     # Area selection
     area_options = dataset["Supply_Area_Name"].unique()
-    selected_area = st.selectbox("Select Area", area_options if len(area_options) > 0 else ["No Areas Available"])
+    selected_area_default = dataset[(dataset["KPIN"] == selected_kpin) & (dataset["Block_Name"] == selected_block)][
+            "Supply_Area_Name"].iloc[0]
+    selected_area = st.selectbox("Select Area", area_options if len(area_options) > 0 else ["No Areas Available"],
+                                 index=area_options.tolist().index(
+                                     selected_area_default) if selected_area_default in area_options else 0)
 
     # Season selection
     season_options = dataset["Year"].unique()
-    selected_season = st.selectbox("Select Season", season_options if len(season_options) > 0 else ["No Seasons Available"])
+    selected_season = st.selectbox("Select Season",
+                                   season_options if len(season_options) > 0 else ["No Seasons Available"])
 
     # Extract data for the selected KPIN and Block and for the selected area (except for selected KPIN and Block)
     selected_dataset = dataset[(dataset["KPIN"] == selected_kpin) & (dataset["Block_Name"] == selected_block)
@@ -162,14 +185,7 @@ def page_onset_kvds(dataset):
     st.markdown(f"**Description:** {visualization_descriptions['Onset KVDS']}")
 
     # KPIN and Block selection
-    col1, col2 = st.columns(2)
-    with col1:
-        kpin_options = sorted(dataset["KPIN"].unique())
-        selected_kpin = st.selectbox("Select KPIN", kpin_options)
-    with col2:
-        filtered_blocks = dataset[dataset["KPIN"] == selected_kpin]["Block_Name"].unique()
-        selected_block = st.selectbox("Select Block", filtered_blocks)
-    selected_primary_key = f"{selected_kpin}_{selected_block}"
+    selected_kpin, selected_block, selected_primary_key = select_kpin_and_block(dataset)
 
     # Filter dataset by selected KPIN and Block
     selected_dataset = dataset[dataset["Primary_Key"] == selected_primary_key]
@@ -193,7 +209,8 @@ def page_onset_kvds(dataset):
 
     # to plot superimposed lines, we need to create a new column for the week of the year
 
-    fig, ax1 = plt.subplots(len(seasons) + 1, 1, figsize=(7, 10), gridspec_kw={'height_ratios': [2] + [1] * len(seasons)})
+    fig, ax1 = plt.subplots(len(seasons) + 1, 1, figsize=(7, 10),
+                            gridspec_kw={'height_ratios': [2] + [1] * len(seasons)})
     plt.tight_layout()
     for i, season in enumerate(seasons):
         season_data = selected_dataset[selected_dataset["Year"] == season]
@@ -227,12 +244,12 @@ def page_onset_kvds(dataset):
                        bottom=season_data['Green_NDVI_Pixels_Number'], color='#FFFF00',
                        width=bar_width, label='Yellow NDVI Pixels')
         ax1[i + 1].bar(r1, season_data['Red_NDVI_Pixels_Number'], color='#8B0000',
-                          bottom=season_data['Green_NDVI_Pixels_Number'] + season_data['Yellow_NDVI_Pixels_Number'],
-                          width=bar_width, label='Red NDVI Pixels')
+                       bottom=season_data['Green_NDVI_Pixels_Number'] + season_data['Yellow_NDVI_Pixels_Number'],
+                       width=bar_width, label='Red NDVI Pixels')
         ax1[i + 1].set_xlabel('Date')
         ax1[i + 1].set_ylabel('Number of Pixels')
         ax1[i + 1].set_title(f'Season: {season}')
-        #ax1[i + 1].legend(loc='lower right')
+        # ax1[i + 1].legend(loc='lower right')
         ax1[i + 1].grid(True)
         ax1[i + 1].set_xticks(r1)
         ax1[i + 1].set_xticklabels(season_data['Year_Week'].dt.strftime('%Y-%m-%d'), rotation=45)

@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from Utils.load_dataset import load_dataset
 
+
 def threshold_ndvi_data(dataset: pd.DataFrame, lower_ndvi_threshold: float, upper_ndvi_threshold: float):
     """
     Apply NDVI thresholding to classify pixels into Green, Yellow, and Red categories.
@@ -31,17 +32,17 @@ def threshold_ndvi_data(dataset: pd.DataFrame, lower_ndvi_threshold: float, uppe
 
     return dataset
 
-"""
-# Example usage:
-dataset = load_dataset('../Satellite_NDVI_data_construction.csv')
-columns_to_print = ['Primary_Key', 'Acquisition_Date', 'Valid_NDVI_Data']
-print(dataset[columns_to_print])
-print(dataset.dtypes)
-print("Thresholding")
-result_dataset = threshold_ndvi_data(dataset, lower_ndvi_threshold=0.3, upper_ndvi_threshold=0.55)
-print(result_dataset[columns_to_print+['Green_NDVI_Pixels']])
-print(result_dataset.dtypes)
-"""
+
+if __name__ == "__main__":
+    # Example usage:
+    dataset = load_dataset('../Satellite_NDVI_data_construction.csv')
+    columns_to_print = ['Primary_Key', 'Acquisition_Date', 'Valid_NDVI_Data']
+    print(dataset[columns_to_print])
+    print(dataset.dtypes)
+    print("Thresholding")
+    result_dataset = threshold_ndvi_data(dataset, lower_ndvi_threshold=0.3, upper_ndvi_threshold=0.55)
+    print(result_dataset[columns_to_print + ['Green_NDVI_Pixels']])
+    print(result_dataset.dtypes)
 
 """
 KPIN                                    int64

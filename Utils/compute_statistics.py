@@ -33,18 +33,18 @@ def compute_ndvi_statistics(dataset: pd.DataFrame):
 
     return dataset
 
-"""
-# Example usage:
-dataset = load_dataset("../Satellite_NDVI_data_construction.csv")
-thresholded_dataset = threshold_ndvi_data(dataset, lower_ndvi_threshold=0.3, upper_ndvi_threshold=0.55)
-print(dataset.columns)  # Check initial columns
 
-result_dataset = compute_ndvi_statistics(dataset)
-print(result_dataset.head())
-print(result_dataset.columns)  # Check the new columns added
-print(dataset.dtypes)
-print(dataset["Mean_Green_Pixels"])
-"""
+if __name__ == "__main__":
+    # Example usage:
+    dataset = load_dataset("../Satellite_NDVI_data_construction.csv")
+    thresholded_dataset = threshold_ndvi_data(dataset, lower_ndvi_threshold=0.3, upper_ndvi_threshold=0.55)
+    print(dataset.columns)  # Check initial columns
+
+    result_dataset = compute_ndvi_statistics(dataset)
+    print(result_dataset.head())
+    print(result_dataset.columns)  # Check the new columns added
+    print(dataset.dtypes)
+    print(dataset["Mean_Green_Pixels"])
 
 """
 KPIN                                    int64

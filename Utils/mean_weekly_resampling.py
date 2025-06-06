@@ -36,7 +36,7 @@ def resample_and_average_weekly(dataset):
     # Merge the resampled data with the mapping to include the additional columns
     weekly_means = weekly_means.merge(primary_key_mapping, on="Primary_Key", how="left")
 
-    weekly_means["KPIN"] = weekly_means["Primary_Key"].apply(lambda x: x.split("_")[0])
+    weekly_means["KPIN"] = weekly_means["Primary_Key"].apply(lambda x: int(x.split("_")[0]))
     weekly_means["Block_Name"] = weekly_means["Primary_Key"].apply(lambda x: x.split("_")[1])
 
     weekly_means["Year_Week"] = pd.to_datetime(
@@ -46,19 +46,6 @@ def resample_and_average_weekly(dataset):
     #weekly_means = resample_to_predefined_weeks(weekly_means)
 
     return weekly_means
-
-"""
-# Example usage:
-dataset = load_dataset("../Satellite_NDVI_data_construction.csv")
-dataset = threshold_ndvi_data(dataset, lower_ndvi_threshold=0.3, upper_ndvi_threshold=0.55)
-dataset = compute_ndvi_statistics(dataset)
-print(dataset.columns)  # Check the new columns added
-print(dataset.dtypes)
-
-weekly_resampled_data = resample_and_average_weekly(dataset)
-print(weekly_resampled_data.head())
-print(weekly_resampled_data.dtypes)  # Check the new columns added
-"""
 
 
 def resample_to_predefined_weeks(dataset):
@@ -91,8 +78,36 @@ def resample_to_predefined_weeks(dataset):
 
     return resampled_dataset
 
+
+if __name__ == "__main__":
+    # Example usage:
+    dataset = load_dataset("../Satellite_NDVI_data_construction.csv")
+    dataset = threshold_ndvi_data(dataset, lower_ndvi_threshold=0.3, upper_ndvi_threshold=0.55)
+    dataset = compute_ndvi_statistics(dataset)
+    print(dataset.columns)  # Check the new columns added
+    print(dataset.dtypes)
+
+    weekly_resampled_data = resample_and_average_weekly(dataset)
+    print(weekly_resampled_data.head())
+    print(weekly_resampled_data.dtypes)  # Check the new columns added
+
 """
-# Example usage:
-resampled_data = resample_to_predefined_weeks(weekly_resampled_data)
-print(resampled_data.head())
+Primary_Key                          object
+Year                                  int64
+Week                                  int64
+Mean_Green_Pixels                   float64
+Mean_Yellow_Pixels                  float64
+Mean_Red_Pixels                     float64
+Green_NDVI_Pixels_Number            float64
+Yellow_NDVI_Pixels_Number           float64
+Red_NDVI_Pixels_Number              float64
+Orchard_Name                         object
+Country_Name                         object
+Supply_Area_Name                     object
+KPIN                                  int64
+Block_Name                           object
+Year_Week                    datetime64[ns]
+dtype: object
+
+Process finished with exit code 0
 """
