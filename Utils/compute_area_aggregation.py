@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 from Utils.load_dataset import load_dataset
 from Utils.threshold_dataset import threshold_ndvi_data
@@ -7,17 +8,27 @@ from Utils.mean_weekly_resampling import resample_and_average_weekly
 
 def compute_weighted_average(dataset):
     # Group by Year, Month, and Day
-    weighted_avg_dataset = dataset.groupby(["Year", "Week"]).agg(
-        Green_NDVI_Pixels_Number=pd.NamedAgg(column="Green_NDVI_Pixels_Number", aggfunc="sum"),
-        Red_NDVI_Pixels_Number=pd.NamedAgg(column="Red_NDVI_Pixels_Number", aggfunc="sum"),
-        Yellow_NDVI_Pixels_Number=pd.NamedAgg(column="Yellow_NDVI_Pixels_Number", aggfunc="sum"),
-        Mean_Green_Pixels=pd.NamedAgg(column="Mean_Green_Pixels", aggfunc=lambda x: (x * dataset.loc[
-            x.index, "Green_NDVI_Pixels_Number"]).sum() / dataset.loc[x.index, "Green_NDVI_Pixels_Number"].sum()),
-        Mean_Yellow_Pixels=pd.NamedAgg(column="Mean_Yellow_Pixels", aggfunc=lambda x: (x * dataset.loc[
-            x.index, "Yellow_NDVI_Pixels_Number"]).sum() / dataset.loc[x.index, "Yellow_NDVI_Pixels_Number"].sum()),
-        Mean_Red_Pixels=pd.NamedAgg(column="Mean_Red_Pixels", aggfunc=lambda x: (x * dataset.loc[
-            x.index, "Red_NDVI_Pixels_Number"]).sum() / dataset.loc[x.index, "Red_NDVI_Pixels_Number"].sum())
-    ).reset_index()
+
+    weighted_avg_dataset = dataset.groupby(["Year", "Week"]).agg({
+        "Green_NDVI_Pixels_Number": 'sum',
+        "Yellow_NDVI_Pixels_Number": 'sum',
+        "Red_NDVI_Pixels_Number": 'sum',
+        "Mean_Green_Pixels": lambda x: (
+            (x * dataset.loc[x.index, "Green_NDVI_Pixels_Number"]).sum() /
+            dataset.loc[x.index, "Green_NDVI_Pixels_Number"].sum()
+            if dataset.loc[x.index, "Green_NDVI_Pixels_Number"].sum() > 0 else np.nan
+        ),
+        "Mean_Yellow_Pixels": lambda x: (
+            (x * dataset.loc[x.index, "Yellow_NDVI_Pixels_Number"]).sum() /
+            dataset.loc[x.index, "Yellow_NDVI_Pixels_Number"].sum()
+            if dataset.loc[x.index, "Yellow_NDVI_Pixels_Number"].sum() > 0 else np.nan
+        ),
+        "Mean_Red_Pixels": lambda x: (
+            (x * dataset.loc[x.index, "Red_NDVI_Pixels_Number"]).sum() /
+            dataset.loc[x.index, "Red_NDVI_Pixels_Number"].sum()
+            if dataset.loc[x.index, "Red_NDVI_Pixels_Number"].sum() > 0 else np.nan
+        )
+    }).reset_index()
 
     #
     weighted_avg_dataset["Year_Week"] = pd.to_datetime(

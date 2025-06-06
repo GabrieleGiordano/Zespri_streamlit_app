@@ -7,37 +7,41 @@ from Utils.compute_statistics import compute_ndvi_statistics
 
 def resample_and_average_weekly(dataset):
     # Group by Primary_Key, Year, and Week, then apply weighted averaging
-    weekly_means = dataset.groupby(["Primary_Key", "Year", "Week"]).apply(
-        lambda group: pd.Series({
-            "Mean_Green_Pixels": (
-                (group["Mean_Green_Pixels"] * group["Green_NDVI_Pixels_Number"]).sum() /
-                group["Green_NDVI_Pixels_Number"].sum()
-                if group["Green_NDVI_Pixels_Number"].sum() > 0 else np.nan
-            ),
-            "Mean_Yellow_Pixels": (
-                (group["Mean_Yellow_Pixels"] * group["Yellow_NDVI_Pixels_Number"]).sum() /
-                group["Yellow_NDVI_Pixels_Number"].sum()
-                if group["Yellow_NDVI_Pixels_Number"].sum() > 0 else np.nan
-            ),
-            "Mean_Red_Pixels": (
-                (group["Mean_Red_Pixels"] * group["Red_NDVI_Pixels_Number"]).sum() /
-                group["Red_NDVI_Pixels_Number"].sum()
-                if group["Red_NDVI_Pixels_Number"].sum() > 0 else np.nan
-            ),
-            "Green_NDVI_Pixels_Number": group["Green_NDVI_Pixels_Number"].sum() / len(group),
-            "Yellow_NDVI_Pixels_Number": group["Yellow_NDVI_Pixels_Number"].sum() / len(group),
-            "Red_NDVI_Pixels_Number": group["Red_NDVI_Pixels_Number"].sum() / len(group),
-        })
-    ).reset_index()
+    weekly_means = dataset.groupby(["Primary_Key", "Year", "Week"]).agg({
+        # Non-aggregated features
+        "KPIN": lambda x: x.mode().iloc[0] if not x.mode().empty else np.nan,
+        "Block_Name": lambda x: x.mode().iloc[0] if not x.mode().empty else np.nan,
+        "Orchard_Name": lambda x: x.mode().iloc[0] if not x.mode().empty else np.nan,
+        "Country_Name": lambda x: x.mode().iloc[0] if not x.mode().empty else np.nan,
+        "Supply_Area_Name": lambda x: x.mode().iloc[0] if not x.mode().empty else np.nan,
+        "Month": lambda x: x.min() if not x.empty else np.nan,
+        "Day": lambda x: x.min() if not x.empty else np.nan,
+        "Acquisition_Date": lambda x: x.min() if not x.empty else np.nan,
+        "Total_Hectares": lambda x: x.mode().iloc[0] if not x.mode().empty else np.nan,
+        "Variety_Name": lambda x: x.mode().iloc[0] if not x.mode().empty else np.nan,
+        # Aggregated features with weighted mean calculations
+        "Mean_Green_Pixels": lambda x: (
+            (x * dataset.loc[x.index, "Green_NDVI_Pixels_Number"]).sum() /
+            dataset.loc[x.index, "Green_NDVI_Pixels_Number"].sum()
+            if dataset.loc[x.index, "Green_NDVI_Pixels_Number"].sum() > 0 else np.nan
+        ),
+        "Mean_Yellow_Pixels": lambda x: (
+            (x * dataset.loc[x.index, "Yellow_NDVI_Pixels_Number"]).sum() /
+            dataset.loc[x.index, "Yellow_NDVI_Pixels_Number"].sum()
+            if dataset.loc[x.index, "Yellow_NDVI_Pixels_Number"].sum() > 0 else np.nan
+        ),
+        "Mean_Red_Pixels": lambda x: (
+            (x * dataset.loc[x.index, "Red_NDVI_Pixels_Number"]).sum() /
+            dataset.loc[x.index, "Red_NDVI_Pixels_Number"].sum()
+            if dataset.loc[x.index, "Red_NDVI_Pixels_Number"].sum() > 0 else np.nan
+        ),
+        "Green_NDVI_Pixels_Number": 'mean',
+        "Yellow_NDVI_Pixels_Number": 'mean',
+        "Red_NDVI_Pixels_Number": 'mean',
+        "Cloud_Or_Shadow_Percentage": 'mean',
+        "Cloud_Or_Shadow_Return_Code": 'mean',
 
-    # Extract unique Primary_Key mappings for Orchard_Name, Country_Name, and Supply_Area_Name
-    primary_key_mapping = dataset[["Primary_Key", "Orchard_Name", "Country_Name", "Supply_Area_Name"]].drop_duplicates()
-
-    # Merge the resampled data with the mapping to include the additional columns
-    weekly_means = weekly_means.merge(primary_key_mapping, on="Primary_Key", how="left")
-
-    weekly_means["KPIN"] = weekly_means["Primary_Key"].apply(lambda x: int(x.split("_")[0]))
-    weekly_means["Block_Name"] = weekly_means["Primary_Key"].apply(lambda x: x.split("_")[1])
+    }).reset_index()
 
     weekly_means["Year_Week"] = pd.to_datetime(
         weekly_means["Year"].astype(str) + "-" + weekly_means["Week"].astype(str) + "-1", format="%Y-%W-%w")

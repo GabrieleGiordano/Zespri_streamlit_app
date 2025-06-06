@@ -15,6 +15,9 @@ def load_dataset(file_path: str) -> pd.DataFrame:
     # Load the dataset
     dataset = pd.read_csv(file_path)
 
+    # Convert "Block_Name" column to string type
+    dataset["Block_Name"] = dataset["Block_Name"].astype(str)
+
     # Convert 'NDVI_Data' column from string representation of matrices to numpy matrices objects
     dataset["NDVI_Data"] = dataset["NDVI_Data"].apply(lambda x: x.replace("null", "None"))
     dataset["NDVI_Data"] = dataset["NDVI_Data"].apply(eval)
