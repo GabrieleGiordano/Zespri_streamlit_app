@@ -32,7 +32,9 @@ def load_dataset(file_path: str) -> pd.DataFrame:
 
 if __name__ == "__main__":
     # Example usage:
-    dataset = load_dataset('../Satellite_NDVI_data_construction.csv')
+    dataset = load_dataset('../Satellite_NDVI_data_construction_2.csv')
     print(dataset.head())
     print(dataset.dtypes)
     print(type(dataset.loc[0, "NDVI_Data"]))
+    print(dataset["Supply_Area_Name"].unique())
+    print(dataset["Acquisition_Date"].count())
