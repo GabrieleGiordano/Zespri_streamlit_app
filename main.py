@@ -23,10 +23,14 @@ def sidebar():
         st.title("NDVI Analysis Settings")
 
         # NDVI Threshold Selection (Numeric Input)
-        lower_ndvi_threshold = st.number_input("Lower NDVI Threshold", min_value=0.0, max_value=1.0, value=0.3,
-                                               step=0.01)
         upper_ndvi_threshold = st.number_input("Upper NDVI Threshold", min_value=0.0, max_value=1.0, value=0.55,
                                                step=0.01)
+        lower_ndvi_threshold = st.number_input("Lower NDVI Threshold", min_value=0.0, max_value=1.0, value=0.3,
+                                               step=0.01)
+        if upper_ndvi_threshold < lower_ndvi_threshold:
+            st.warning("Upper NDVI Threshold must be greater than or equal to the Lower NDVI Threshold.")
+            raise ValueError(
+                "Upper NDVI Threshold must be greater than or equal to the Lower NDVI Threshold.")
 
         # Visualization Type Selection (Dropdown Menu)
         visualization_options = ["Low or No KVDS", "Onset KVDS", "Established KVDS"]
@@ -46,7 +50,7 @@ def select_kpin_and_block(dataset):
     """
     col1, col2 = st.columns(2)
     with col1:
-        orchard_options = dataset["Orchard_Name"].unique()
+        orchard_options = dataset["Orchard_Name"].dropna().unique()
         if len(orchard_options) == 0:
             st.warning("No orchards available in the dataset.")
             return None, None, None
@@ -82,7 +86,7 @@ def page_low_or_no_kvds(dataset):
     selected_kpin, selected_block, selected_primary_key = select_kpin_and_block(dataset)
 
     # Area selection
-    area_options = dataset["Supply_Area_Name"].unique()
+    area_options = dataset["Supply_Area_Name"].dropna().unique()
     selected_area_default = dataset[(dataset["KPIN"] == selected_kpin) & (dataset["Block_Name"] == selected_block)][
             "Supply_Area_Name"].iloc[0]
     selected_area = st.selectbox("Select Area", area_options if len(area_options) > 0 else ["No Areas Available"],
@@ -109,6 +113,7 @@ def page_low_or_no_kvds(dataset):
 
     # Compute the aggregation for the selected area
     area_aggregation_dataset = compute_weighted_average(comparison_dataset)
+    area_aggregation_dataset = resample_and_average_weekly(area_aggregation_dataset)
 
     # display the selected dataset
     st.dataframe(selected_dataset)
@@ -130,10 +135,11 @@ def page_low_or_no_kvds(dataset):
              linestyle='--', label=f"Area: {selected_area}")
     ax1.set_xlabel("Date")
     ax1.set_ylabel("Mean NDVI Pixels")
-    ax1.set_title("Mean Green Pixels")
+    ax1.set_title(f"Mean Green Pixels for KPIN: {selected_kpin}, Block: {selected_block}, Season: {selected_season}")
     ax1.legend()
     ax1.grid(True)
-    plt.xticks(rotation=45)
+    ax1.set_xticks(selected_dataset["Year_Week"])
+    ax1.set_xticklabels(selected_dataset["Year_Week"].dt.strftime('%m-%d'), rotation=90)
 
     # Plot the Number of Green NDVI Pixels for the selected KPIN and Block and for the selected area
     # Create discrete stacked plot in the superior subplot
@@ -149,14 +155,13 @@ def page_low_or_no_kvds(dataset):
                    selected_dataset['Yellow_NDVI_Pixels_Number'], color='#8B0000',
             width=bar_width, label='Red NDVI Pixels')  # Darker red
 
-    plt.suptitle(f'Distribution of NDVI Pixels')
     ax2.set_xlabel('Date')
     ax2.set_ylabel('Number of Pixels')
-    ax2.set_title(f'KPIN:{selected_kpin}, Block:{selected_block}')
+    ax2.set_title(f'Distribution of NDVI Pixels, KPIN:{selected_kpin}, Block:{selected_block}, Season: {selected_season}')
     ax2.legend(loc='lower right')
     ax2.grid(True)
     ax2.set_xticks(r1)
-    ax2.set_xticklabels(selected_dataset['Year_Week'].dt.strftime('%Y-%m-%d'), rotation=45)
+    ax2.set_xticklabels(selected_dataset['Year_Week'].dt.strftime('%m-%d'), rotation=90)
 
     # Create discrete stacked plot in the inferior subplot
     r2 = range(len(area_aggregation_dataset['Year_Week']))
@@ -171,10 +176,10 @@ def page_low_or_no_kvds(dataset):
             color='#8B0000', width=bar_width, label='Red NDVI Pixels')  # Darker red
     ax3.set_xlabel('Date')
     ax3.set_ylabel('Number of Pixels')
-    ax3.set_title(f'{selected_area} area')
+    ax3.set_title(f'Distribution of NDVI Pixels, {selected_area} area, Season: {selected_season}')
     ax3.grid(True)
     ax3.set_xticks(r2)
-    ax3.set_xticklabels(area_aggregation_dataset['Year_Week'].dt.strftime('%Y-%m-%d'), rotation=45)
+    ax3.set_xticklabels(area_aggregation_dataset['Year_Week'].dt.strftime('%m-%d'), rotation=90)
 
     plt.tight_layout()
     st.pyplot(fig)
@@ -225,9 +230,10 @@ def page_onset_kvds(dataset):
     ax1[0].set_xlabel("Date")
     ax1[0].set_ylabel("Mean NDVI Pixels")
     ax1[0].set_title(f"Mean Green Pixels for Selected KPIN: {selected_kpin}, Block: {selected_block}")
+    # ax1[0].set_xticks(selected_dataset["Week"]) # Da sistemare
+    ax1[0].set_xticklabels(selected_dataset["Week"], rotation=90)
     ax1[0].legend()
     ax1[0].grid(True)
-    plt.xticks(rotation=45)
 
     # Plot the Number of Pixels for each season
     bar_width = 0.35
@@ -248,11 +254,11 @@ def page_onset_kvds(dataset):
                        width=bar_width, label='Red NDVI Pixels')
         ax1[i + 1].set_xlabel('Date')
         ax1[i + 1].set_ylabel('Number of Pixels')
-        ax1[i + 1].set_title(f'Season: {season}')
+        ax1[i + 1].set_title(f'Distribution of NDVI Pixels, Season: {season}')
         # ax1[i + 1].legend(loc='lower right')
         ax1[i + 1].grid(True)
         ax1[i + 1].set_xticks(r1)
-        ax1[i + 1].set_xticklabels(season_data['Year_Week'].dt.strftime('%Y-%m-%d'), rotation=45)
+        ax1[i + 1].set_xticklabels(season_data['Year_Week'].dt.strftime('%m-%d'), rotation=90)
 
     plt.suptitle(f'Distribution of NDVI Pixels')
     plt.tight_layout()

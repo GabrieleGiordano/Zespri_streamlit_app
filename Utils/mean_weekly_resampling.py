@@ -4,6 +4,8 @@ from Utils.load_dataset import load_dataset
 from Utils.threshold_dataset import threshold_ndvi_data
 from Utils.compute_statistics import compute_ndvi_statistics
 
+import streamlit as st
+
 
 def resample_and_average_weekly(dataset):
     # Group by Primary_Key, Year, and Week, then apply weighted averaging
@@ -47,7 +49,9 @@ def resample_and_average_weekly(dataset):
         weekly_means["Year"].astype(str) + "-" + weekly_means["Week"].astype(str) + "-1", format="%Y-%W-%w")
     weekly_means = weekly_means.sort_values(by="Year_Week")
 
-    #weekly_means = resample_to_predefined_weeks(weekly_means)
+    weekly_means = resample_to_predefined_weeks(weekly_means)
+    #print(resample_to_predefined_weeks(weekly_means))
+    #st.dataframe(resample_to_predefined_weeks(weekly_means))
 
     return weekly_means
 
@@ -55,30 +59,29 @@ def resample_and_average_weekly(dataset):
 def resample_to_predefined_weeks(dataset):
     # Define the predefined range of weeks (April to October)
     predefined_start_week = 14  # First week of April
-    predefined_end_week = 43   # Last week of October
+    predefined_end_week = 44   # Last week of October
 
     # Create a complete range of weeks for each Primary_Key and Year
     complete_weeks = []
     for (primary_key, year), group in dataset.groupby(["Primary_Key", "Year"]):
-        all_weeks = pd.date_range(
-            start=f"{year}-W{predefined_start_week}-1",
-            end=f"{year}-W{predefined_end_week}-1",
-            freq="W-MON"
-        )
+        start_date = pd.to_datetime(f"{year}-{predefined_start_week}-1", format="%Y-%W-%w")
+        end_date = pd.to_datetime(f"{year}-{predefined_end_week}-1", format="%Y-%W-%w")
+        # Create weekly date range
+        all_weeks = pd.date_range(start=start_date, end=end_date, freq="W-MON")
+        # Append the DataFrame
         complete_weeks.append(pd.DataFrame({"Primary_Key": primary_key, "Year_Week": all_weeks}))
 
     # Concatenate all complete weeks
     complete_weeks_df = pd.concat(complete_weeks, ignore_index=True)
 
     # Merge the complete weeks with the original dataset
-    dataset["Year_Week"] = pd.to_datetime(
-        dataset["Year"].astype(str) + "-W" + dataset["Week"].astype(str) + "-1", format="%Y-%W-%w"
-    )
     resampled_dataset = pd.merge(complete_weeks_df, dataset, on=["Primary_Key", "Year_Week"], how="left")
 
     # Extract Year and Week from the resampled Year_Week
     resampled_dataset["Year"] = resampled_dataset["Year_Week"].dt.year
     resampled_dataset["Week"] = resampled_dataset["Year_Week"].dt.isocalendar().week
+    resampled_dataset["KPIN"] = resampled_dataset["Primary_Key"].str.split("_").str[0].astype(int)
+    resampled_dataset["Block_Name"] = resampled_dataset["Primary_Key"].str.split("_").str[1]
 
     return resampled_dataset
 

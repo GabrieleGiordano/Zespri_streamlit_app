@@ -34,6 +34,20 @@ def compute_weighted_average(dataset):
     weighted_avg_dataset["Year_Week"] = pd.to_datetime(
         weighted_avg_dataset["Year"].astype(str) + "-" + weighted_avg_dataset["Week"].astype(str) + "-1", format="%Y-%W-%w")
     weighted_avg_dataset = weighted_avg_dataset.sort_values(by="Year_Week")
+    weighted_avg_dataset["Acquisition_Date"] = weighted_avg_dataset["Year_Week"].dt.date
+
+    weighted_avg_dataset["Primary_Key"] = "0000_AreaAggregation"
+    weighted_avg_dataset["KPIN"] = np.nan
+    weighted_avg_dataset["Block_Name"] = np.nan
+    weighted_avg_dataset["Orchard_Name"] = np.nan
+    weighted_avg_dataset["Country_Name"] = np.nan
+    weighted_avg_dataset["Supply_Area_Name"] = np.nan
+    weighted_avg_dataset["Month"] = np.nan
+    weighted_avg_dataset["Day"] = np.nan
+    weighted_avg_dataset["Total_Hectares"] = np.nan
+    weighted_avg_dataset["Variety_Name"] = np.nan
+    weighted_avg_dataset["Cloud_Or_Shadow_Percentage"] = np.nan
+    weighted_avg_dataset["Cloud_Or_Shadow_Return_Code"] = np.nan
 
     return weighted_avg_dataset
 
