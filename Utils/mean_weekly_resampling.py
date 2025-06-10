@@ -74,6 +74,13 @@ def resample_to_predefined_weeks(dataset):
     # Concatenate all complete weeks
     complete_weeks_df = pd.concat(complete_weeks, ignore_index=True)
 
+    """
+    
+    #complete_weeks_df["Week"] = complete_weeks_df["Year_Week"].dt.isocalendar().week
+    #st.dataframe(complete_weeks_df)
+    #st.dataframe(dataset)
+    """
+
     # Merge the complete weeks with the original dataset
     resampled_dataset = pd.merge(complete_weeks_df, dataset, on=["Primary_Key", "Year_Week"], how="left")
 

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from Utils.load_dataset import load_dataset
 from Utils.threshold_dataset import threshold_ndvi_data
 from Utils.compute_statistics import compute_ndvi_statistics
-from Utils.mean_weekly_resampling import resample_and_average_weekly
+from Utils.mean_weekly_resampling import resample_and_average_weekly, resample_to_predefined_weeks
 from Utils.compute_area_aggregation import compute_weighted_average
 
 # Page Configuration
@@ -113,24 +113,27 @@ def page_low_or_no_kvds(dataset):
 
     # Compute the aggregation for the selected area
     area_aggregation_dataset = compute_weighted_average(comparison_dataset)
+
+    # resample the datasets to weekly averages
     area_aggregation_dataset = resample_and_average_weekly(area_aggregation_dataset)
 
     # display the selected dataset
     st.dataframe(selected_dataset)
-    st.dataframe(comparison_dataset)
+    st.dataframe(area_aggregation_dataset)
 
     # Placeholder for NDVI trend comparison plot
     st.subheader("NDVI Trend Comparison")
     st.write("Compare NDVI trends of the selected field vs the selected area (not including the selected filed)")
 
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(7, 10), gridspec_kw={'height_ratios': [2, 1, 1]})
-    plt.tight_layout()
+
+    r1 = [x + 14 for x in range(selected_dataset.shape[0])]
 
     # Plot the Mean NDVI of Green Pixels for the selected KPIN and Block and for the selected area
-    ax1.plot(selected_dataset["Year_Week"], selected_dataset["Mean_Green_Pixels"], color='green', marker='o',
+    ax1.plot(selected_dataset["Week"], selected_dataset["Mean_Green_Pixels"], color='green', marker='o',
              markersize=5,
              label=f"KPIN: {selected_kpin}, Block: {selected_block} - Mean Green Pixels")
-    ax1.plot(area_aggregation_dataset["Year_Week"], area_aggregation_dataset["Mean_Green_Pixels"], color='lightgreen',
+    ax1.plot(area_aggregation_dataset["Week"], area_aggregation_dataset["Mean_Green_Pixels"], color='lightgreen',
              marker='o', markersize=5,
              linestyle='--', label=f"Area: {selected_area}")
     ax1.set_xlabel("Date")
@@ -138,13 +141,13 @@ def page_low_or_no_kvds(dataset):
     ax1.set_title(f"Mean Green Pixels for KPIN: {selected_kpin}, Block: {selected_block}, Season: {selected_season}")
     ax1.legend()
     ax1.grid(True)
-    ax1.set_xticks(selected_dataset["Year_Week"])
+    ax1.set_xticks(r1)
+    ax1.set_xlim(13, 45)
     ax1.set_xticklabels(selected_dataset["Year_Week"].dt.strftime('%m-%d'), rotation=90)
 
     # Plot the Number of Green NDVI Pixels for the selected KPIN and Block and for the selected area
     # Create discrete stacked plot in the superior subplot
     bar_width = 0.35
-    r1 = range(len(selected_dataset['Year_Week']))
     ax2.bar(r1, selected_dataset['Green_NDVI_Pixels_Number'], color='#006400',
             width=bar_width, label='Green NDVI Pixels')  # Darker green
     ax2.bar(r1, selected_dataset['Yellow_NDVI_Pixels_Number'],
@@ -161,16 +164,16 @@ def page_low_or_no_kvds(dataset):
     ax2.legend(loc='lower right')
     ax2.grid(True)
     ax2.set_xticks(r1)
+    ax2.set_xlim(13, 45)
     ax2.set_xticklabels(selected_dataset['Year_Week'].dt.strftime('%m-%d'), rotation=90)
 
     # Create discrete stacked plot in the inferior subplot
-    r2 = range(len(area_aggregation_dataset['Year_Week']))
-    ax3.bar(r2, area_aggregation_dataset['Green_NDVI_Pixels_Number'], color='#006400',
+    ax3.bar(r1, area_aggregation_dataset['Green_NDVI_Pixels_Number'], color='#006400',
             width=bar_width, label='Green NDVI Pixels')  # Darker green
-    ax3.bar(r2, area_aggregation_dataset['Yellow_NDVI_Pixels_Number'],
+    ax3.bar(r1, area_aggregation_dataset['Yellow_NDVI_Pixels_Number'],
             bottom=area_aggregation_dataset['Green_NDVI_Pixels_Number'], color='#FFFF00',
             width=bar_width, label='Yellow NDVI Pixels')  # Lighter yellow
-    ax3.bar(r2, area_aggregation_dataset['Red_NDVI_Pixels_Number'],
+    ax3.bar(r1, area_aggregation_dataset['Red_NDVI_Pixels_Number'],
             bottom=area_aggregation_dataset['Green_NDVI_Pixels_Number'] + area_aggregation_dataset[
                 'Yellow_NDVI_Pixels_Number'],
             color='#8B0000', width=bar_width, label='Red NDVI Pixels')  # Darker red
@@ -178,7 +181,8 @@ def page_low_or_no_kvds(dataset):
     ax3.set_ylabel('Number of Pixels')
     ax3.set_title(f'Distribution of NDVI Pixels, {selected_area} area, Season: {selected_season}')
     ax3.grid(True)
-    ax3.set_xticks(r2)
+    ax3.set_xticks(r1)
+    ax3.set_xlim(13, 45)
     ax3.set_xticklabels(area_aggregation_dataset['Year_Week'].dt.strftime('%m-%d'), rotation=90)
 
     plt.tight_layout()
@@ -200,10 +204,17 @@ def page_onset_kvds(dataset):
 
     # Seasons selection
     season_options = selected_dataset["Year"].unique()
+    season_options = season_options[season_options != 2025]  # TEMPORANEOUS FIX: Exclude 2025 data
     seasons = st.multiselect("Select Seasons", season_options, default=season_options)
 
     # Filter dataset by selected seasons
     selected_dataset = selected_dataset[selected_dataset["Year"].isin(seasons)]
+    # resample the dataset to weekly averages
+    st.write("Resampling the dataset to weekly averages...")
+    st.dataframe(selected_dataset)
+    selected_dataset = resample_to_predefined_weeks(selected_dataset)
+    #selected_dataset = resample_and_average_weekly(selected_dataset)
+    st.dataframe(selected_dataset)
 
     # display the selected dataset
     st.dataframe(selected_dataset)
@@ -216,13 +227,15 @@ def page_onset_kvds(dataset):
 
     fig, ax1 = plt.subplots(len(seasons) + 1, 1, figsize=(7, 10),
                             gridspec_kw={'height_ratios': [2] + [1] * len(seasons)})
+
+    r1 = [x + 14 for x in range(len(selected_dataset["Week"].unique()))]
+
     plt.tight_layout()
     for i, season in enumerate(seasons):
         season_data = selected_dataset[selected_dataset["Year"] == season]
         if season_data.empty:
             st.warning(f"No data available for the selected season: {season}")
             continue
-        # plot superimposed lines, use the same year (1900) as reference
 
         ax1[0].plot(season_data["Week"], season_data["Mean_Yellow_Pixels"], marker='o', markersize=5,
                     label=f"Season: {season}")
@@ -230,8 +243,9 @@ def page_onset_kvds(dataset):
     ax1[0].set_xlabel("Date")
     ax1[0].set_ylabel("Mean NDVI Pixels")
     ax1[0].set_title(f"Mean Green Pixels for Selected KPIN: {selected_kpin}, Block: {selected_block}")
-    # ax1[0].set_xticks(selected_dataset["Week"]) # Da sistemare
-    ax1[0].set_xticklabels(selected_dataset["Week"], rotation=90)
+    ax1[0].set_xticks(r1)
+    ax1[0].set_xlim(13, 45)
+    ax1[0].set_xticklabels(season_data['Year_Week'].dt.strftime('%m-%d'), rotation=90)
     ax1[0].legend()
     ax1[0].grid(True)
 
@@ -243,21 +257,23 @@ def page_onset_kvds(dataset):
             st.warning(f"No data available for the selected season: {season}")
             continue
         # Create discrete stacked plot in the superior subplot
-        r1 = range(len(season_data['Week']))
+
+        r1 = [x + 14 for x in range(len(season_data['Week']))]
         ax1[i + 1].bar(r1, season_data['Green_NDVI_Pixels_Number'], color='#006400',
-                       width=bar_width, label='Green NDVI Pixels')
+                       width=bar_width, label='Green NDVI Pixels', align='center')
         ax1[i + 1].bar(r1, season_data['Yellow_NDVI_Pixels_Number'],
                        bottom=season_data['Green_NDVI_Pixels_Number'], color='#FFFF00',
-                       width=bar_width, label='Yellow NDVI Pixels')
+                       width=bar_width, label='Yellow NDVI Pixels', align='center')
         ax1[i + 1].bar(r1, season_data['Red_NDVI_Pixels_Number'], color='#8B0000',
                        bottom=season_data['Green_NDVI_Pixels_Number'] + season_data['Yellow_NDVI_Pixels_Number'],
-                       width=bar_width, label='Red NDVI Pixels')
+                       width=bar_width, label='Red NDVI Pixels', align='center')
         ax1[i + 1].set_xlabel('Date')
         ax1[i + 1].set_ylabel('Number of Pixels')
         ax1[i + 1].set_title(f'Distribution of NDVI Pixels, Season: {season}')
-        # ax1[i + 1].legend(loc='lower right')
+        ax1[i + 1].legend(loc='lower right')
         ax1[i + 1].grid(True)
         ax1[i + 1].set_xticks(r1)
+        ax1[i + 1].set_xlim(13, 45)
         ax1[i + 1].set_xticklabels(season_data['Year_Week'].dt.strftime('%m-%d'), rotation=90)
 
     plt.suptitle(f'Distribution of NDVI Pixels')
