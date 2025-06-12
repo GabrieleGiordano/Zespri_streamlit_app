@@ -4,8 +4,6 @@ from Utils.load_dataset import load_dataset
 from Utils.threshold_dataset import threshold_ndvi_data
 from Utils.compute_statistics import compute_ndvi_statistics
 
-import streamlit as st
-
 
 def resample_and_average_weekly(dataset):
     # Group by Primary_Key, Year, and Week, then apply weighted averaging

@@ -9,6 +9,7 @@ from Utils.mean_weekly_resampling import resample_and_average_weekly
 
 from page_low_kvds import page_low_or_no_kvds
 from page_onset_kvds import page_onset_kvds
+from page_enstablished_kvds import page_established_kvds
 
 
 # Page Configuration
@@ -41,31 +42,17 @@ def sidebar():
 
     return lower_ndvi_threshold, upper_ndvi_threshold, selected_visualization
 
-# Temporary empty DataFrame for demonstration purposes
-dataset_df = load_dataset("./Satellite_NDVI_data_construction_2.csv")
-
-
-def page_established_kvds(dataset):
-    st.title("Established KVDS")
-    st.markdown(f"**Description:** To be added later.")
-
-    # KPIN and Block selection
-    col1, col2 = st.columns(2)
-    with col1:
-        kpin_options = sorted(dataset["KPIN"].unique())
-        selected_kpin = st.selectbox("Select KPIN", kpin_options)
-    with col2:
-        filtered_blocks = dataset[dataset["KPIN"] == selected_kpin]["Block_Name"].unique()
-        selected_block = st.selectbox("Select Block", filtered_blocks)
-
-    # Plot
-
 
 # Determine which page to load
 def main():
-    # Sidebar for user input
+
+    # Load the dataset
+    dataset_df = load_dataset("./Satellite_NDVI_data_construction_2.csv")
+
+    # Sidebar for input parameters
     lower_ndvi_threshold, upper_ndvi_threshold, selected_visualization = sidebar()
 
+    ########## Data Preprocessing ##########
     # Apply NDVI thresholding
     dataset = threshold_ndvi_data(dataset_df, lower_ndvi_threshold, upper_ndvi_threshold)
     # Compute NDVI statistics
@@ -73,6 +60,7 @@ def main():
     # Resample weekly for visualization
     dataset = resample_and_average_weekly(dataset)
 
+    ########## Page Navigation ##########
     if selected_visualization == "Low or No KVDS":
         page_low_or_no_kvds(dataset)
     elif selected_visualization == "Onset KVDS":
