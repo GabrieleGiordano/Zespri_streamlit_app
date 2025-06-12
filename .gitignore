@@ -25,6 +25,10 @@ MANIFEST
 # PyCharm
 .idea/
 
+# Visual Studio Code
+.vscode/
+.devcontainer/
+
 # Environments
 .env
 .venv
